@@ -1,6 +1,7 @@
 from tkinter import *
 from tkinter import ttk
 
+
 def criarTabela(frame):
     global table 
     table = ttk.Treeview(frame, columns = ('ID', 'Produto', 'Classificacao', 'Linha', 'Estoque', 'Un. Estoque', 'Qtd. Producao', 'Unidade'), show = 'headings')
@@ -22,6 +23,7 @@ def criarTabela(frame):
     table.column('Un. Estoque', width=80, anchor=CENTER)
     table.column('Qtd. Producao', width=100, anchor=CENTER)
     table.column('Unidade', width=80, anchor=CENTER)
+    table.bind("<ButtonRelease>", lambda event: teste(event, table))
     
     global tableSemiAcabados 
     tableSemiAcabados = ttk.Treeview(frame, columns = ('ID', 'Produto', 'Classificacao', 'Linha', 'Estoque', 'Un. Estoque', 'Qtd. Producao', 'Unidade'), show = 'headings')
@@ -43,6 +45,15 @@ def criarTabela(frame):
     tableSemiAcabados.column('Un. Estoque', width=80, anchor=CENTER)
     tableSemiAcabados.column('Qtd. Producao', width=100, anchor=CENTER)
     tableSemiAcabados.column('Unidade', width=80, anchor=CENTER)
+    tableSemiAcabados.bind("<ButtonRelease>", lambda event: teste(event, tableSemiAcabados))
+
+
+def teste(event, tabela):
+    global tabela_atual
+    indice = tabela.selection()
+    if indice:
+        tabela_atual = tabela.item(indice)['values'][0]
+        print(tabela_atual)
 
 
 def atualizarTabela(frame):
@@ -112,3 +123,48 @@ def criarTabelaEvento(nova_janela):
     tabelaEventos.column('Qtd Evento', width=80, anchor=CENTER)
     tabelaEventos.column('Unidade', width=60, anchor=CENTER)
 
+
+def criarTabelaMesAnterior(nova_janela):
+    global tbl_ano_anterior
+    tbl_ano_anterior = ttk.Treeview(nova_janela, columns = ('ID', 'Produto', 'Linha', 'Total ano anterior', 'Unidade', 'Composição acabado'), show='headings')
+    tbl_ano_anterior.heading('ID', text='ID')
+    tbl_ano_anterior.heading('Produto', text='Produto')
+    tbl_ano_anterior.heading('Linha', text='Linha')
+    tbl_ano_anterior.heading('Total ano anterior', text='Total ano anterior')
+    tbl_ano_anterior.heading('Unidade', text='Unidade')
+    tbl_ano_anterior.heading('Composição acabado', text='Composição acabado')
+    tbl_ano_anterior.grid(row=1, columnspan=2, padx=(80, 0), pady=10, sticky="nsew")
+    
+    tbl_ano_anterior.column('ID', width=70, anchor=CENTER)
+    tbl_ano_anterior.column('Produto', width=100, anchor=CENTER)
+    tbl_ano_anterior.column('Linha', width=100, anchor=CENTER)
+    tbl_ano_anterior.column('Total ano anterior', width=130, anchor=CENTER)
+    tbl_ano_anterior.column('Unidade', width=100, anchor=CENTER)
+    tbl_ano_anterior.column('Composição acabado', width=200, anchor=CENTER)
+
+# def verQtdAnoPassado():
+#     tst = tabela_atual
+#     print(tst)
+#     prod_ano_passado = relatorioPedidos.setarData('ano-anterior')
+#     produto = tst
+#     produtosFiltrados = list(filter(lambda p:int(p['idProdutoComposicao']) == int(produto), prod_ano_passado))
+#     abrirJanelaAnoAnterior(produtosFiltrados)
+    
+# def abrirJanelaAnoAnterior(produtosFiltrados):
+#     j_ano_anterior = Toplevel(relatorioPedidos.root)
+#     j_ano_anterior.title("Quantidade ano anterior")
+#     j_ano_anterior.geometry("1250x400")
+#     criarTabelaMesAnterior(j_ano_anterior)
+#     for x in produtosFiltrados:
+#         id = x['idProdutoComposicao']
+#         produto = x['nomeProdutoComposicao']
+#         linha = x['linha']
+#         total = x['totalProducao']
+#         unidade = x['unidade']
+#         if x['produtoAcabado'] == True:
+#             produto_acabado = 'Comp. acabados'
+#         else:
+#             produto_acabado = 'Comp. semi-acabados'            
+#         data = (id, produto, linha, total, unidade, produto_acabado)
+#         tbl_ano_anterior.insert(parent='', index=0, values=data)
+    

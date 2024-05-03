@@ -30,16 +30,25 @@ def formatarDataPedido(data):
     formatted_date = date_object.strftime('%d/%m/%Y')
     return formatted_date 
 
-def setarData():
+def setarData(tipo_requisicao):
     dataInicio = dtInicio.get()
     dtInicioFormatada = formatarData(dataInicio)
     dataFim = dtFim.get()
     dtFimFormatada = formatarData(dataFim)
     if dtInicioFormatada < dtFimFormatada:
         global ajustes_periodo
-        produtosComposicao = connection.getProdutosComposicao(dtInicioFormatada, dtFimFormatada)
-        composicaoSemiAcabados = connection.getCompSemiAcabados(dtInicioFormatada, dtFimFormatada)
-        ajustes = connection.getAjustes(dtInicioFormatada, dtFimFormatada)
+        global ajustes_ano_anterior
+        if tipo_requisicao == 'ano-atual':
+            produtosComposicao = connection.getProdutosComposicao(dtInicioFormatada, dtFimFormatada)
+            composicaoSemiAcabados = connection.getCompSemiAcabados(dtInicioFormatada, dtFimFormatada)
+            ajustes = connection.getAjustes(dtInicioFormatada, dtFimFormatada)
+            print(dtInicioFormatada, dtFimFormatada)
+        else:
+            n_dt_inicio = int(dtInicioFormatada) - 10000
+            n_dt_fim = int(dtFimFormatada) - 10000
+            produtosComposicao = connection.getProdutosComposicao(n_dt_inicio, n_dt_fim)
+            composicaoSemiAcabados = connection.getCompSemiAcabados(n_dt_inicio, n_dt_fim)
+            ajustes = connection.getAjustes(n_dt_inicio, n_dt_fim)
                 
         if len(produtosComposicao) == 0:
             tamanhoLista = 0
@@ -49,7 +58,10 @@ def setarData():
             estoque = connection.getEstoque()
             produtosQtdAjustada = formatacao_objeto.calcularQtdProducao(produtosComposicao)
             ajustesAplicados = formatacao_objeto.aplicarAjustes(produtosQtdAjustada, ajustes)
-            ajustes_periodo = ajustesAplicados
+            if tipo_requisicao == 'ano-atual':
+                ajustes_periodo = ajustesAplicados
+            else:
+                ajustes_ano_anterior = ajustesAplicados
             formatacao_objeto.adicionarEstoque(ajustesAplicados, estoque)
             mp_acabados = formatacao_objeto.somarProdutosEvento(ajustesAplicados)
             mp_semiAcabados = criarDictSemiAcabados(mp_acabados, composicaoSemiAcabados, estoque)
@@ -107,7 +119,7 @@ def filtrarListas(tipoFiltro, listaCompleta):
         return listaFiltrada
 
 def separarProdutosEvento(listaProdutos):
-    if trazerTodos.get() or filtrarSal.get() or  filtrarDoces.get() or filtrarConfeitaria.get() or filtrarCanapes.get() or filtrarRefeicoes.get() == 1:
+    if trazerTodos.get() or filtrarSal.get() or filtrarDoces.get() or filtrarConfeitaria.get() or filtrarCanapes.get() or filtrarRefeicoes.get() == 1:
         if trazerTodos.get() == 1:       
             criacao_planilha.gerarArquivoExcel('LISTA_PEDIDOS', listaProdutos)
         if filtrarSal.get() == 1:
@@ -131,7 +143,7 @@ def separarProdutosEvento(listaProdutos):
 
 
 def selecionarOpcao(event):
-    todosProdutos = setarData()
+    todosProdutos = setarData('ano-atual')
     valorSelecionado = combo.get()
     if valorSelecionado == 'Todos os produtos':
         return todosProdutos
@@ -166,7 +178,6 @@ def verTodosEventos(lista_produtos, tabela):
         produto = tabela.item(indice)['values'][0]
         produtosFiltrados = list(filter(lambda evento:int(evento['idProdutoComposicao']) == int(produto), lista_produtos))
         abrirOutraJanela(produtosFiltrados)
-            
 
 def abrirOutraJanela(produtosFiltrados):
     nova_janela = Toplevel(root)  # Cria uma nova janela
@@ -189,6 +200,32 @@ def abrirOutraJanela(produtosFiltrados):
         tabelas.tabelaEventos.insert(parent='', index=0, values=data)
     
 #def mensagemBanco():
+
+def verQtdAnoPassado():
+    tst = tabelas.tabela_atual
+    print(tst)
+    prod_ano_passado = setarData('ano-anterior')
+    produto = tst
+    produtosFiltrados = list(filter(lambda p:int(p['idProdutoComposicao']) == int(produto), prod_ano_passado))
+    abrirJanelaAnoAnterior(produtosFiltrados)
+
+def abrirJanelaAnoAnterior(produtosFiltrados):
+    j_ano_anterior = Toplevel(root)
+    j_ano_anterior.title("Quantidade ano anterior")
+    j_ano_anterior.geometry("1250x400")
+    tabelas.criarTabelaMesAnterior(j_ano_anterior)
+    for x in produtosFiltrados:
+        id = x['idProdutoComposicao']
+        produto = x['nomeProdutoComposicao']
+        linha = x['linha']
+        total = x['totalProducao']
+        unidade = x['unidade']
+        if x['produtoAcabado'] == True:
+            produto_acabado = 'Comp. acabados'
+        else:
+            produto_acabado = 'Comp. semi-acabados'            
+        data = (id, produto, linha, total, unidade, produto_acabado)
+        tabelas.tbl_ano_anterior.insert(parent='', index=0, values=data)
 
 def inserirTabelaTeste(tipo_requisicao):
     produtos_meio_semana = setarDataPedidosMeioSemana(tipo_requisicao)
@@ -281,7 +318,7 @@ def inserirNaLista():
             
 
 def gerarPlanilha():
-    produtos = setarData()
+    produtos = setarData('ano-atual')
     if produtos == None:
         messagebox.showinfo('Data inválida', 'Periodo selecionado inválido')
     elif produtos == 0:
@@ -377,7 +414,10 @@ tabela_acabados.grid(row=6, columnspan=2, padx=(150, 0), pady=10, sticky="nsew")
 #row 7 --> Tabela composição acabados
 
 btn_mostrar_eventos = Button(secondFrame, text="Ver todos os eventos", bg='#C0C0C0', font=("Arial", 16), command= lambda:verTodosEventos(ajustes_periodo, tabelas.table))
-btn_mostrar_eventos.grid(row=8)
+btn_mostrar_eventos.grid(row=8, column=0)
+
+btn_abrir_janela = Button(secondFrame, text="Ver qtd. ano anterior", bg='#C0C0C0', font=("Arial", 16), command=verQtdAnoPassado)
+btn_abrir_janela.grid(row=8, column=1)
 
 tabela_semiacabados = Label(secondFrame, text="Composição de produtos semi-acabados", font=("Arial", 14))
 tabela_semiacabados.grid(row=9, columnspan=2, padx=(150, 0), pady=10, sticky="nsew")
