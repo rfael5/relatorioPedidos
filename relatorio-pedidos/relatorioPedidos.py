@@ -18,6 +18,7 @@ import tabelas
 import criacao_planilha
 
 
+#Retornam as datas para um formato legivel
 def formatarData(data):
     data_objeto = datetime.strptime(data, '%d/%m/%Y')
     data_formatada = data_objeto.strftime('%Y%m%d')
@@ -30,29 +31,55 @@ def formatarDataPedido(data):
     formatted_date = date_object.strftime('%d/%m/%Y')
     return formatted_date 
 
-def setarData():
+#Pega a data inserida na interface, formata ela, e passa como parâmetro
+#na função que executa a query.
+def setarData(tipo_requisicao):
     dataInicio = dtInicio.get()
     dtInicioFormatada = formatarData(dataInicio)
     dataFim = dtFim.get()
     dtFimFormatada = formatarData(dataFim)
     if dtInicioFormatada < dtFimFormatada:
         global ajustes_periodo
-        produtosComposicao = connection.getProdutosComposicao(dtInicioFormatada, dtFimFormatada)
-        composicaoSemiAcabados = connection.getCompSemiAcabados(dtInicioFormatada, dtFimFormatada)
-        ajustes = connection.getAjustes(dtInicioFormatada, dtFimFormatada)
+        global ajustes_ano_anterior
+        if tipo_requisicao == 'ano-atual':
+            #Armazena nas variáveis abaixo a lista de produtos da composição de acabados, 
+            #de semi-acabados e de ajustes do periodo.
+            produtosComposicao = connection.getProdutosComposicao(dtInicioFormatada, dtFimFormatada)
+            composicaoSemiAcabados = connection.getCompSemiAcabados(dtInicioFormatada, dtFimFormatada)
+            ajustes = connection.getAjustes(dtInicioFormatada, dtFimFormatada)
+            print(dtInicioFormatada, dtFimFormatada)
+        else:
+            #Se o parametro tipo_requisicao for diferente de ano-atual, essa função retorna os
+            #pedidos do mesmo periodo selecionado, porém para o ano passado.
+            n_dt_inicio = int(dtInicioFormatada) - 10000
+            n_dt_fim = int(dtFimFormatada) - 10000
+            produtosComposicao = connection.getProdutosComposicao(n_dt_inicio, n_dt_fim)
+            composicaoSemiAcabados = connection.getCompSemiAcabados(n_dt_inicio, n_dt_fim)
+            ajustes = connection.getAjustes(n_dt_inicio, n_dt_fim)
                 
         if len(produtosComposicao) == 0:
             tamanhoLista = 0
             tabelas.criarTabela(secondFrame)
             return tamanhoLista
         else:
+            #Retorna o saldo de estoque
             estoque = connection.getEstoque()
+            #Pega a quantidade de cada produto usado na receita final, e multiplica pelo
+            #número de pedidos dessa receita.
             produtosQtdAjustada = formatacao_objeto.calcularQtdProducao(produtosComposicao)
+            #Corrige esse valor com os ajustes feitos pelo cliente
             ajustesAplicados = formatacao_objeto.aplicarAjustes(produtosQtdAjustada, ajustes)
-            ajustes_periodo = ajustesAplicados
+            if tipo_requisicao == 'ano-atual':
+                ajustes_periodo = ajustesAplicados
+            else:
+                ajustes_ano_anterior = ajustesAplicados
+            #insere na lista uma coluna com o saldo de estoque
             formatacao_objeto.adicionarEstoque(ajustesAplicados, estoque)
+            #Soma todos os pedidos de cada produto, chegando ao valor total de pedidos para cada um
             mp_acabados = formatacao_objeto.somarProdutosEvento(ajustesAplicados)
+            #Faz as operações acima com a lista de composição dos semi-acabados
             mp_semiAcabados = criarDictSemiAcabados(mp_acabados, composicaoSemiAcabados, estoque)
+            #Une a lista dos acabados com os semi-acabados em uma só, e retorna a lista final
             produtos = formatacao_objeto.unirListasComposicao(mp_acabados, mp_semiAcabados)
             return produtos 
     else:
@@ -63,6 +90,8 @@ def checarEventosNaLista():
     for evento in tabelas.tabelaSemana.get_children():
         print(tabelas.tabelaSemana.item(evento))
 
+#Mesmo fluxo da função acima setarData(), porém para os pedidos feitos
+#depois que a lista ja foi gerada para serem entregues naquela mesma semana.
 def setarDataPedidosMeioSemana(tipo_requisicao):
     if tipo_requisicao == 'btn':
         dataInicio = dt_inicio_semana.get()
@@ -96,7 +125,9 @@ def setarDataPedidosMeioSemana(tipo_requisicao):
         
         return produtos
 
-
+#Função para o usuário filtrar a lista e visualizar os produtos
+#por linha de produção, caso queiram ver somente os pedidos para
+#receitas de sal, doce, confeitaria, etc.
 def filtrarListas(tipoFiltro, listaCompleta):
     if listaCompleta == None:
         return None
@@ -106,8 +137,10 @@ def filtrarListas(tipoFiltro, listaCompleta):
         listaFiltrada = list(filter(lambda produto:produto['linha'] == tipoFiltro, listaCompleta))
         return listaFiltrada
 
+#Função para caso o usuário queira gerar uma planilha excel somente com
+#os produtos de determinada linha de produção.
 def separarProdutosEvento(listaProdutos):
-    if trazerTodos.get() or filtrarSal.get() or  filtrarDoces.get() or filtrarConfeitaria.get() or filtrarCanapes.get() or filtrarRefeicoes.get() == 1:
+    if trazerTodos.get() or filtrarSal.get() or filtrarDoces.get() or filtrarConfeitaria.get() or filtrarCanapes.get() or filtrarRefeicoes.get() == 1:
         if trazerTodos.get() == 1:       
             criacao_planilha.gerarArquivoExcel('LISTA_PEDIDOS', listaProdutos)
         if filtrarSal.get() == 1:
@@ -129,9 +162,9 @@ def separarProdutosEvento(listaProdutos):
         messagebox.showinfo("Seleção Inválida", "Selecione o tipo de planilha a ser gerado.")
         return None
 
-
+#Função que retorna a lista completa ou filtrada para ser inserida na tabela da interface.
 def selecionarOpcao(event):
-    todosProdutos = setarData()
+    todosProdutos = setarData('ano-atual')
     valorSelecionado = combo.get()
     if valorSelecionado == 'Todos os produtos':
         return todosProdutos
@@ -160,20 +193,22 @@ def formatarDataPedido(data):
     formatted_date = date_object.strftime('%d/%m/%Y')
     return formatted_date
 
+#Quando o usuário seleciona um produto na lista e clica no botão 'Ver todos os eventos'
+#Essa função é executada e mostra as receitas em que aquele produto vai ser usado, os
+#clientes que as pediram, e a data de entrega.
 def verTodosEventos(lista_produtos, tabela):
     indice = tabela.selection()
     if indice:
         produto = tabela.item(indice)['values'][0]
         produtosFiltrados = list(filter(lambda evento:int(evento['idProdutoComposicao']) == int(produto), lista_produtos))
         abrirOutraJanela(produtosFiltrados)
-            
 
+#Essa função abre uma nova janela com os dados retornados pela função verTodosEventos()
 def abrirOutraJanela(produtosFiltrados):
-    nova_janela = Toplevel(root)  # Cria uma nova janela
+    nova_janela = Toplevel(root)
     nova_janela.title("Nova Janela")
     nova_janela.geometry("950x400")
     produto_selecionado = produtosFiltrados[0]['nomeProdutoComposicao']
-    # Adicione widgets ou conteúdo à nova janela aqui
     label = Label(nova_janela, text=f'{produto_selecionado}')
     label.grid(padx=20, pady=20)
     
@@ -190,18 +225,47 @@ def abrirOutraJanela(produtosFiltrados):
     
 #def mensagemBanco():
 
+#verQtdAnoPassado e abrirJanelaAnoAnterior fazem as mesmas coisas das duas funções acima,
+#porém mostrando os pedidos do ano passado.
+def verQtdAnoPassado():
+    tst = tabelas.tabela_atual
+    print(tst)
+    prod_ano_passado = setarData('ano-anterior')
+    produto = tst
+    produtosFiltrados = list(filter(lambda p:int(p['idProdutoComposicao']) == int(produto), prod_ano_passado))
+    abrirJanelaAnoAnterior(produtosFiltrados)
+
+def abrirJanelaAnoAnterior(produtosFiltrados):
+    j_ano_anterior = Toplevel(root)
+    j_ano_anterior.title("Quantidade ano anterior")
+    j_ano_anterior.geometry("1250x400")
+    tabelas.criarTabelaAnoAnterior(j_ano_anterior)
+    for x in produtosFiltrados:
+        id = x['idProdutoComposicao']
+        produto = x['nomeProdutoComposicao']
+        linha = x['linha']
+        total = x['totalProducao']
+        unidade = x['unidade']
+        if x['produtoAcabado'] == True:
+            produto_acabado = 'Comp. acabados'
+        else:
+            produto_acabado = 'Comp. semi-acabados'            
+        data = (id, produto, linha, total, unidade, produto_acabado)
+        tabelas.tbl_ano_anterior.insert(parent='', index=0, values=data)
+
+
+#Recupera os pedidos feitos depois que a lista já foi gerada e insere na
+#tabela na interface.
 def inserirTabelaTeste(tipo_requisicao):
     produtos_meio_semana = setarDataPedidosMeioSemana(tipo_requisicao)
     
     if produtos_meio_semana == 0 or produtos_meio_semana == None:
         mensagem_banco.configure(text='Nenhum evento foi marcado hoje para essa semana')
-        #messagebox.showinfo('Sem eventos', 'Nenhum evento nesse período')
     else:
         qtd_eventos_tabela = len(tabelas.tabelaSemana.get_children()) + len(tabelas.tabelaSemana_semi.get_children())
         qtd_eventos_query = len(produtos_meio_semana)
         if qtd_eventos_tabela != qtd_eventos_query:
             mensagem_banco.configure(text='Houve marcação de eventos hoje para essa semana.')
-            #messagebox.showinfo('Novos eventos/encomendas', 'Novos pedidos foram feitos hoje para essa semana.')
             tabelas.tabelaSemana.delete(*tabelas.tabelaSemana.get_children())
             tabelas.tabelaSemana_semi.delete(*tabelas.tabelaSemana_semi.get_children())
             for p in produtos_meio_semana:
@@ -219,24 +283,30 @@ def inserirTabelaTeste(tipo_requisicao):
                 else:
                     tabelas.tabelaSemana_semi.insert(parent='', index=0, values=data)
         else:
-            #messagebox.showinfo('Sem novos pedidos hoje', 'Nenhum pedido novo por enquanto.')
             return
+
 
 def formatarListaSemiAcabados(lista, estoque):
     formatacao_objeto.adicionarEstoque(lista, estoque)
     df = pd.DataFrame(lista)
     df['produtoAcabado'] = False
+    #Remove caracteres desnecessários que vem na string do nome do produto e da 
+    #unidade de medida do produto.
     df['unidade'] = df['unidadeComposicao'].apply(formatacao_objeto.alterarStringUnidade)
     df['nomeProdutoComposicao'] = df['nomeProdutoComposicao']. apply(formatacao_objeto.alterarStringUnidade)
     df['unidadeEstoque'] = df['unidadeEstoque'].apply(formatacao_objeto.alterarStringUnidade)
+    #Converte as quantidades dos produtos que estão em grama e ml para kg e litros.
     df['totalProducao'] = df.apply(formatacao_objeto.converterKg, axis=1)
     df['unidade'] = df['unidade'].apply(formatacao_objeto.mudarUnidade)
     
+    #Ordena os dados na ordem que devem aparecer na tabela.
     df = df[['idProdutoComposicao', 'nomeProdutoComposicao', 'classificacao', 'linha', 'estoque', 'unidadeEstoque', 'totalProducao', 'unidade', 'produtoAcabado']]
 
     result = formatacao_objeto.converterPJson(df)
     return result
 
+#Cria um dicionario para inserir os dados da composição dos semi-acabados
+#no mesmo formato da composição dos acabados.
 def criarDictSemiAcabados(acabados, semiAcabados, estoque):
     dfAcabados = pd.DataFrame(acabados)
 
@@ -251,19 +321,24 @@ def criarDictSemiAcabados(acabados, semiAcabados, estoque):
     listaFormatada = formatarListaSemiAcabados(listaJson, estoque)
     return listaFormatada
 
+#Insere os produtos na tabela na interface.
 def inserirNaLista():
+    #Retorna os dados já formatados, sem filtro ou filtrados, para serem inseridos na lista.
     produtos = selecionarOpcao(Event)
 
+    #Caso não tenha nenhum pedido no período selecionado ou o período seja inválido, a interface
+    #mostra uma mensagem de erro
     if produtos == None:
         messagebox.showinfo('Data inválida', 'Periodo selecionado inválido')
     elif produtos == 0:
         messagebox.showinfo('Lista vazia', 'Não há eventos nesse período de tempo')    
     else:
+        #Produtos são ordenados em ordem alfabetica
         produtosOrdenados = sorted(produtos, key=lambda p:p['nomeProdutoComposicao'], reverse=True)
         
+        #Sempre que o usuário faz uma nova pesquisa, a tabela é deletada e criada novamente.
         tabelas.table.delete(*tabelas.table.get_children())
         tabelas.tableSemiAcabados.delete(*tabelas.tableSemiAcabados.get_children())
-        #['idProdutoComposicao', 'nomeProdutoComposicao', 'classificacao', 'estoque', 'unidadeEstoque', 'totalProducao', 'unidade']
         for p in produtosOrdenados:
             id = p['idProdutoComposicao']
             nome = p['nomeProdutoComposicao']
@@ -279,9 +354,9 @@ def inserirNaLista():
             else:
                 tabelas.tableSemiAcabados.insert(parent='', index=0, values=data)
             
-
+#Função para caso o usuário queira gerar uma planilha com todos os pedidos.
 def gerarPlanilha():
-    produtos = setarData()
+    produtos = setarData('ano-atual')
     if produtos == None:
         messagebox.showinfo('Data inválida', 'Periodo selecionado inválido')
     elif produtos == 0:
@@ -296,13 +371,20 @@ def gerarPlanilha():
             composicao_semiacabados = list(filter(lambda produto:produto['produtoAcabado'] == False, produtos))
             separarProdutosEvento(composicao_semiacabados)
 
-
+#Essa função é executada de 10 em 10 segundos e confere se foi feito algum pedido
+#depois que a lista de pedidos já foi gerada, para ser entregue naquela semana.
 def consultarAttBanco():
     #global hora_atual
     hora_atual = datetime.now()
     hora_ultima_checagem.configure(text=f'Momento da última checagem: {str(hora_atual)}')
+    #Caso haja novos pedidos, essa função irá buscar esses pedidos de última hora no banco
+    #e mostrá-los em uma outra janela na nossa interface
     inserirTabelaTeste('timer')
     page2.after(10000, consultarAttBanco)
+
+
+
+#O código abaixo cria a interface que usamos para testar nosso script.
 
 
 #Tkinter
@@ -377,7 +459,10 @@ tabela_acabados.grid(row=6, columnspan=2, padx=(150, 0), pady=10, sticky="nsew")
 #row 7 --> Tabela composição acabados
 
 btn_mostrar_eventos = Button(secondFrame, text="Ver todos os eventos", bg='#C0C0C0', font=("Arial", 16), command= lambda:verTodosEventos(ajustes_periodo, tabelas.table))
-btn_mostrar_eventos.grid(row=8)
+btn_mostrar_eventos.grid(row=8, column=0)
+
+btn_abrir_janela = Button(secondFrame, text="Ver qtd. ano anterior", bg='#C0C0C0', font=("Arial", 16), command=verQtdAnoPassado)
+btn_abrir_janela.grid(row=8, column=1)
 
 tabela_semiacabados = Label(secondFrame, text="Composição de produtos semi-acabados", font=("Arial", 14))
 tabela_semiacabados.grid(row=9, columnspan=2, padx=(150, 0), pady=10, sticky="nsew")

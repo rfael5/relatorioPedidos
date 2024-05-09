@@ -5,6 +5,8 @@ from tkinter import *
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill
 
+#Nesse arquivo estão as funções que auxiliam na criação da planilha excel
+#com os pedidos de suprimento.
 
 def recuperarHoraAtual():
     data_hora_atual = datetime.now()

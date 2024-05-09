@@ -2,32 +2,36 @@ from sqlalchemy import create_engine
 import pandas as pd
 import json
 
-conexao = (
-    "mssql+pyodbc:///?odbc_connect=" + 
-    "DRIVER={ODBC Driver 17 for SQL Server};" +
-    "SERVER=localhost;" +
-    "DATABASE=SOUTTOMAYOR;" +
-    "UID=Sa;" +
-    "PWD=P@ssw0rd2023"
-)
-
 # conexao = (
 #     "mssql+pyodbc:///?odbc_connect=" + 
 #     "DRIVER={ODBC Driver 17 for SQL Server};" +
-#     "SERVER=192.168.1.43;" +
+#     "SERVER=localhost;" +
 #     "DATABASE=SOUTTOMAYOR;" +
 #     "UID=Sa;" +
-#     "PWD=P@ssw0rd2023@#$"
+#     "PWD=P@ssw0rd2023"
 # )
+
+#Conexão no banco principal
+conexao = (
+    "mssql+pyodbc:///?odbc_connect=" + 
+    "DRIVER={ODBC Driver 17 for SQL Server};" +
+    "SERVER=192.168.1.43;" +
+    "DATABASE=SOUTTOMAYOR;" +
+    "UID=Sa;" +
+    "PWD=P@ssw0rd2023@#$"
+)
 
 engine = create_engine(conexao, pool_pre_ping=True)
 
+#Executa a query e armazena os dados em uma variável
+#Retorna os dados convertidos para json
 def receberDados(query):
     response = pd.read_sql_query(query, engine)
     resultadosJson = response.to_json(orient='records')
     dadosDesserializados = json.loads(resultadosJson)
     return dadosDesserializados
 
+#Query que busca os produtos usados na composição das receitas
 def getProdutosComposicao(dataInicio, dataFim):
     queryProdutosComposicao =  f"""
     select 
@@ -61,6 +65,11 @@ def getProdutosComposicao(dataInicio, dataFim):
     produtosComposicao = receberDados(queryProdutosComposicao)
     return produtosComposicao
 
+#Query que busca somente os pedidos feitos no meio do período pesquisado
+#para serem entregues naquela semana.
+#Com esses dados, mesmo depois que o usuário tiver buscado os pedidos para essa
+#semana, caso entre um pedido para aquela semana depois que ele já tiver feito
+#a requisição, ele será informado.
 def getPedidosMeioSemana(dataInicio, dataFim):
     queryPedidosMeioSemana = f"""
     select 
@@ -103,6 +112,9 @@ def getPedidosMeioSemana(dataInicio, dataFim):
     pedidosMeioSemana = receberDados(queryPedidosMeioSemana)
     return pedidosMeioSemana
 
+#Query que busca os produtos usados na composição dos semi-acabados, que são
+#massas e recheios que vão nas receitas prontas, e que também tem que ser 
+#requisitados no estoque.
 def getCompSemiAcabados(dataInicio, dataFim):
     queryComposicao = f"""
     SELECT 
@@ -140,6 +152,7 @@ ORDER BY
     composicaoSemiAcabados = receberDados(queryComposicao)
     return composicaoSemiAcabados
 
+#Query que busca os semi-acabados que são pedidos de última hora.
 def getSemiAcabadosMeioSemana(dataInicio, dataFim):
     query = f"""
     SELECT 
@@ -180,7 +193,8 @@ def getSemiAcabadosMeioSemana(dataInicio, dataFim):
     composicaoSemiAcabados = receberDados(query)
     return composicaoSemiAcabados
     
-
+#Query que busca ajustes feitos nos pedidos, aumentos ou diminuições solicitada
+#pelo cliente.
 def getAjustes(dataInicio, dataFim):
     queryAjustes = f"""
     select A.IDX_MOVTOPED AS idMovtoped, V.IDX_PRODUTO AS idProduto, V.DESCRICAO AS nomeProduto, A.QUANTIDADE AS ajuste, A.PRECO AS precoAjuste from TPAAJUSTEPEDITEM AS A 
@@ -208,6 +222,7 @@ def getAjustes(dataInicio, dataFim):
     ajustes = receberDados(queryAjustes)
     return ajustes
 
+#Query que busca o saldo de estoque do produto.
 def getEstoque():
     queryEstoque = """
     WITH RankedResults AS (

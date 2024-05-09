@@ -4,12 +4,14 @@ import json
 
 from tkinter import *
 
-
+#Calcula a quantidade final dos pedidos considerando os ajustes.
 def adicionarAjustes(evento, ajustes):
     for a in ajustes:
         if a['idMovtoped'] == evento['idMovtoped']:
             evento['qtdProdutoEvento'] = evento['qtdProdutoEvento'] + a['ajuste']
 
+#Cria um dicionário com a composição dos produtos semi-acabados no mesmo formato
+#da composição dos acabados.
 def inserirCol_SemiAcabados(row, semiAcabados):
     listaComposicao = []
     listaOrdenada = sorted(semiAcabados, key=lambda p:p['nomeProdutoAcabado'])
@@ -38,7 +40,7 @@ def converterPJson(lista):
     dadosDesserializados = json.loads(resultJson)
     return dadosDesserializados
 
-
+#Remove caracteres das strings que atrapalhavam na manipulação dos dados.
 def alterarStringUnidade(unidade):
     if '\x00' in unidade:
         unidadeCorrigida = unidade.replace('\x00', '')
@@ -46,6 +48,7 @@ def alterarStringUnidade(unidade):
     else:
         return unidade   
 
+#Converte as medidas dos produtos de gramas e ml para quilos e litros.
 def converterKg(produto):
     if str(produto['unidade']) == "GR" or str(produto['unidade']) == "ML":
         result = produto['totalProducao'] / 1000 
@@ -53,6 +56,7 @@ def converterKg(produto):
         result = produto['totalProducao']
     return round(result, 4)
 
+#Muda a string para a unidade de medida correta.
 def mudarUnidade(unidade):
     if unidade == 'GR':
         return 'KG'
@@ -61,7 +65,11 @@ def mudarUnidade(unidade):
     else:
         return unidade
     
-    
+
+#Multiplica a quantidade do produto que vai na receita pela quantidade
+#de pedidos da receita final.
+#Dependendo da unidade de medida em que o produto é vendido, a quantidade
+#total tem que ser dividida por 10 ou por 100. 
 def calcularQtdProducao(produtosComposicao):
     for e in produtosComposicao:
         if e['unidadeAcabado'] == 'PP':
@@ -78,12 +86,13 @@ def calcularQtdProducao(produtosComposicao):
             e["totalProducao"] = total
     return produtosComposicao
 
-
+#Executa a função que calcula o ajuste em cada produto da lista.
 def aplicarAjustes(produtosComposicao, ajustes):
     for p in produtosComposicao:
         adicionarAjustes(p, ajustes)
     return produtosComposicao
 
+#Insere a coluna com o saldo de estoque em cada produto da lista.
 def adicionarEstoque(produtos, estoque):
     for p in produtos:
         p['estoque'] = 0
@@ -93,6 +102,8 @@ def adicionarEstoque(produtos, estoque):
                 p['estoque'] = e['SALDOESTOQUE']
                 p['unidadeEstoque'] = e['UN']
 
+#Junta as subdivisões da linha de produção das receitas em um só grupo.
+#Por exemplo, as linhas de S1 até S6, são agrupadas apenas como sal.
 def agruparLinhas(produto):
     if '\x00' in produto['linha']:
         produto['linha'] = produto['linha'].replace('\x00', '')
@@ -115,6 +126,7 @@ def agruparLinhas(produto):
     if produto['linha'] == 'S7' or produto['linha'] == 'S8':
         return 'Refeições'           
 
+#Junta as listas de composição de acabados e de semi-acabados em uma só.
 def unirListasComposicao(acabados, semiAcabados):
     for p in acabados:
         p['produtoAcabado'] = True
@@ -129,24 +141,30 @@ def unirListasComposicao(acabados, semiAcabados):
     dadosOrdenados = sorted(res, key=lambda p:p['nomeProdutoComposicao'])
     return dadosOrdenados   
 
-
+#Função que soma a quantidade total de cada pedido
 def somarProdutosEvento(produtosComposicao):
     dfComposicao = pd.DataFrame(produtosComposicao)
     dfComposicao.drop_duplicates(inplace=True)
     dfComposicao['produtoAcabado'] = True
     
+    #Remove caracteres desnecessários da string da unidade de medida
     dfComposicao['unidade'] = dfComposicao['unidadeComposicao'].apply(alterarStringUnidade)
+    #Convert unidades GR e ML para KG e LT
     dfComposicao['totalProducao'] = dfComposicao.apply(converterKg, axis=1)
+    #Agrupa as linhas de produção sob um só tipo, como sal, doce, confeitaria, etc.
     dfComposicao['linha'] = dfComposicao.apply(agruparLinhas, axis=1)
     
+    #Soma a quantidade total de pedidos de suprimento para cada produto
     result = dfComposicao.groupby(['idProdutoComposicao', 'nomeProdutoComposicao', 'classificacao', 'unidade', 'linha', 'estoque', 'unidadeEstoque', 'produtoAcabado'])[['totalProducao']].sum().reset_index()
 
+    #Muda a string de unidade de medida de GR para KG.
     result['unidade'] = result['unidade'].apply(mudarUnidade)
     
+    #Organiza as colunas na ordem que devem aparecer na tabela.
     result = result[['idProdutoComposicao', 'nomeProdutoComposicao', 'classificacao', 'linha', 'estoque', 'unidadeEstoque', 'totalProducao', 'unidade', 'produtoAcabado']]
     
     resultJson = result.to_json(orient='records')
     dadosDesserializados = json.loads(resultJson)
+    #Ordena os produtos em ordem alfabetica.
     dadosOrdenados = sorted(dadosDesserializados, key=lambda p:p['nomeProdutoComposicao'])
-    #separarProdutosEvento(dadosDesserializados)
     return dadosOrdenados
