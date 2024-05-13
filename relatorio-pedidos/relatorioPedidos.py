@@ -7,10 +7,6 @@ from tkinter import *
 from tkinter import ttk
 from tkcalendar import DateEntry
 from tkinter import messagebox
-from openpyxl import Workbook
-from openpyxl import load_workbook
-from openpyxl.styles import PatternFill
-from random import choice
 
 import connection
 import formatacao_objeto
@@ -47,7 +43,6 @@ def setarData(tipo_requisicao):
             produtosComposicao = connection.getProdutosComposicao(dtInicioFormatada, dtFimFormatada)
             composicaoSemiAcabados = connection.getCompSemiAcabados(dtInicioFormatada, dtFimFormatada)
             ajustes = connection.getAjustes(dtInicioFormatada, dtFimFormatada)
-            print(dtInicioFormatada, dtFimFormatada)
         else:
             #Se o parametro tipo_requisicao for diferente de ano-atual, essa função retorna os
             #pedidos do mesmo periodo selecionado, porém para o ano passado.
@@ -168,23 +163,10 @@ def selecionarOpcao(event):
     valorSelecionado = combo.get()
     if valorSelecionado == 'Todos os produtos':
         return todosProdutos
-    elif valorSelecionado == 'Sal':
-        produtosSal = filtrarListas('Sal', todosProdutos)
-        return produtosSal
-    elif valorSelecionado == 'Doces':
-        produtosDoce = filtrarListas('Doces', todosProdutos)
-        return produtosDoce
-    elif valorSelecionado == 'Confeitaria':
-        produtosConfeitaria = filtrarListas('Confeitaria', todosProdutos)
-        return produtosConfeitaria
-    elif valorSelecionado == 'Refeições':
-        produtosRefeicao = filtrarListas('Refeições', todosProdutos)
-        return produtosRefeicao
-    elif valorSelecionado == 'Canapés':
-        produtosCanapes = filtrarListas('Canapés', todosProdutos)
-        return produtosCanapes
-    
-    print(f"Opção selecionada: {valorSelecionado}")
+    else:
+        produtos_filtrados = filtrarListas(valorSelecionado, todosProdutos)
+        return produtos_filtrados
+
 
 def formatarDataPedido(data):
     milliseconds_since_epoch = data
@@ -229,7 +211,6 @@ def abrirOutraJanela(produtosFiltrados):
 #porém mostrando os pedidos do ano passado.
 def verQtdAnoPassado():
     tst = tabelas.tabela_atual
-    print(tst)
     prod_ano_passado = setarData('ano-anterior')
     produto = tst
     produtosFiltrados = list(filter(lambda p:int(p['idProdutoComposicao']) == int(produto), prod_ano_passado))
@@ -383,7 +364,6 @@ def consultarAttBanco():
     page2.after(10000, consultarAttBanco)
 
 
-
 #O código abaixo cria a interface que usamos para testar nosso script.
 
 
@@ -448,7 +428,7 @@ opcaoSelecionada = StringVar()
 opcaoSelecionada.set('Todos os produtos')
 combo = ttk.Combobox(secondFrame, values=opcoes, textvariable=opcaoSelecionada)
 combo.grid(row=4, padx=(160, 100), columnspan=2, sticky='nsew')
-combo.bind("<<ComboboxSelected>>", selecionarOpcao)
+#combo.bind("<<ComboboxSelected>>", selecionarOpcao)
 
 btn_obter_data = Button(secondFrame, text="Mostrar lista", bg='#C0C0C0', font=("Arial", 16), command=inserirNaLista)
 btn_obter_data.grid(row=5, column=0, columnspan=2, padx=(80, 0), pady=2, sticky='nsew')
@@ -541,7 +521,7 @@ btn_mostrar_eventos.grid(row=7)
 tabelas.criarTabelaMeioSemana(page2)
 tabelas.criarTabela(secondFrame)
 
-consultarAttBanco()
+#consultarAttBanco()
 
 root.mainloop()
 

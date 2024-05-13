@@ -136,13 +136,27 @@ def unirListasComposicao(acabados, semiAcabados):
     df = pd.DataFrame(acabados)
     result = df.groupby(['idProdutoComposicao', 'nomeProdutoComposicao', 'classificacao', 'unidade', 'linha', 'estoque', 'unidadeEstoque','produtoAcabado'])[['totalProducao']].sum().reset_index()
     result = result[['idProdutoComposicao', 'nomeProdutoComposicao', 'classificacao', 'linha', 'estoque', 'unidadeEstoque', 'totalProducao', 'unidade', 'produtoAcabado']]
-    
+    result['totalProducao'] = result['totalProducao'].round(2)
     res = converterPJson(result)
     dadosOrdenados = sorted(res, key=lambda p:p['nomeProdutoComposicao'])
     return dadosOrdenados   
 
+#Remove versões alteradas de uma receita e deixa somente uma receita original
+def removerReceitasAlteradas(lista_completa:list):
+    copia_lista = lista_completa
+    for p_copia in copia_lista:
+        for p_original in lista_completa:
+            if p_original['idProdutoAcabado'] == p_copia['idProdutoAcabado'] and p_original['DTINC'] > p_copia['DTINC']:
+                lista_completa.remove(p_original)
+            else:
+                return
+
+
 #Função que soma a quantidade total de cada pedido
 def somarProdutosEvento(produtosComposicao):
+       
+    removerReceitasAlteradas(produtosComposicao)
+    
     dfComposicao = pd.DataFrame(produtosComposicao)
     dfComposicao.drop_duplicates(inplace=True)
     dfComposicao['produtoAcabado'] = True
