@@ -3,24 +3,24 @@ import pandas as pd
 import json
 
 #Conexão banco de testes
-conexao = (
-    "mssql+pyodbc:///?odbc_connect=" + 
-    "DRIVER={ODBC Driver 17 for SQL Server};" +
-    "SERVER=localhost;" +
-    "DATABASE=SOUTTOMAYOR;" +
-    "UID=Sa;" +
-    "PWD=P@ssw0rd2023"
-)
-
-#Conexão no banco principal
 # conexao = (
 #     "mssql+pyodbc:///?odbc_connect=" + 
 #     "DRIVER={ODBC Driver 17 for SQL Server};" +
-#     "SERVER=192.168.1.43;" +
+#     "SERVER=localhost;" +
 #     "DATABASE=SOUTTOMAYOR;" +
 #     "UID=Sa;" +
-#     "PWD=P@ssw0rd2023@#$"
+#     "PWD=P@ssw0rd2023"
 # )
+
+#Conexão no banco principal
+conexao = (
+    "mssql+pyodbc:///?odbc_connect=" + 
+    "DRIVER={ODBC Driver 17 for SQL Server};" +
+    "SERVER=192.168.1.43;" +
+    "DATABASE=SOUTTOMAYOR;" +
+    "UID=Sa;" +
+    "PWD=P@ssw0rd2023@#$"
+)
 
 engine = create_engine(conexao, pool_pre_ping=True)
 

@@ -59,19 +59,22 @@ def setarData(tipo_requisicao):
         else:
             #Retorna o saldo de estoque
             estoque = connection.getEstoque()
+            
+            #Corrige esse valor com os ajustes feitos pelo cliente
+            ajustesAplicados = formatacao_objeto.aplicarAjustes(produtosComposicao, ajustes)
+            
             #Pega a quantidade de cada produto usado na receita final, e multiplica pelo
             #número de pedidos dessa receita.
-            produtosQtdAjustada = formatacao_objeto.calcularQtdProducao(produtosComposicao)
-            #Corrige esse valor com os ajustes feitos pelo cliente
-            ajustesAplicados = formatacao_objeto.aplicarAjustes(produtosQtdAjustada, ajustes)
+            produtosQtdAjustada = formatacao_objeto.calcularQtdProducao(ajustesAplicados)
+            
             if tipo_requisicao == 'ano-atual':
                 ajustes_periodo = ajustesAplicados
             else:
                 ajustes_ano_anterior = ajustesAplicados
             #insere na lista uma coluna com o saldo de estoque
-            formatacao_objeto.adicionarEstoque(ajustesAplicados, estoque)
+            formatacao_objeto.adicionarEstoque(produtosQtdAjustada, estoque)
             #Soma todos os pedidos de cada produto, chegando ao valor total de pedidos para cada um
-            mp_acabados = formatacao_objeto.somarProdutosEvento(ajustesAplicados)
+            mp_acabados = formatacao_objeto.somarProdutosEvento(produtosQtdAjustada)
             #Faz as operações acima com a lista de composição dos semi-acabados
             mp_semiAcabados = criarDictSemiAcabados(mp_acabados, composicaoSemiAcabados, estoque)
             #Une a lista dos acabados com os semi-acabados em uma só, e retorna a lista final
@@ -438,11 +441,11 @@ tabela_acabados.grid(row=6, columnspan=2, padx=(150, 0), pady=10, sticky="nsew")
 
 #row 7 --> Tabela composição acabados
 
-btn_mostrar_eventos = Button(secondFrame, text="Ver todos os eventos", bg='#C0C0C0', font=("Arial", 16), command= lambda:verTodosEventos(ajustes_periodo, tabelas.table))
-btn_mostrar_eventos.grid(row=8, column=0)
+# btn_mostrar_eventos = Button(secondFrame, text="Ver todos os eventos", bg='#C0C0C0', font=("Arial", 16), command= lambda:verTodosEventos(ajustes_periodo, tabelas.table))
+# btn_mostrar_eventos.grid(row=8, column=0)
 
-btn_abrir_janela = Button(secondFrame, text="Ver qtd. ano anterior", bg='#C0C0C0', font=("Arial", 16), command=verQtdAnoPassado)
-btn_abrir_janela.grid(row=8, column=1)
+# btn_abrir_janela = Button(secondFrame, text="Ver qtd. ano anterior", bg='#C0C0C0', font=("Arial", 16), command=verQtdAnoPassado)
+# btn_abrir_janela.grid(row=8, column=1)
 
 tabela_semiacabados = Label(secondFrame, text="Composição de produtos semi-acabados", font=("Arial", 14))
 tabela_semiacabados.grid(row=9, columnspan=2, padx=(150, 0), pady=10, sticky="nsew")
@@ -518,7 +521,7 @@ btn_pedidos_semana.grid(row=4)
 btn_mostrar_eventos = Button(page2, text="Ver todos os eventos", bg='#C0C0C0', font=("Arial", 16), command= lambda:verTodosEventos(ajustes_meio_semana, tabelas.tabelaSemana))
 btn_mostrar_eventos.grid(row=7)
 
-tabelas.criarTabelaMeioSemana(page2)
+#tabelas.criarTabelaMeioSemana(page2)
 tabelas.criarTabela(secondFrame)
 
 #consultarAttBanco()

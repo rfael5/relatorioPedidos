@@ -56,7 +56,7 @@ def armazenarIdProduto(event, tabela):
     indice = tabela.selection()
     if indice:
         tabela_atual = tabela.item(indice)['values'][0]
-        print(tabela_atual)
+        #print(tabela_atual)
 
 #Recria uma tabela sempre que há uma atualização ou que o usuário realiza uma
 #nova pesquisa.

@@ -143,13 +143,20 @@ def unirListasComposicao(acabados, semiAcabados):
 
 #Remove versões alteradas de uma receita e deixa somente uma receita original
 def removerReceitasAlteradas(lista_completa:list):
-    copia_lista = lista_completa
-    for p_copia in copia_lista:
-        for p_original in lista_completa:
-            if p_original['idProdutoAcabado'] == p_copia['idProdutoAcabado'] and p_original['DTINC'] > p_copia['DTINC']:
-                lista_completa.remove(p_original)
-            else:
-                return
+    lista_remocao = []
+    nova_lista = []
+
+    for copia in lista_completa:
+        for prod in lista_completa:
+            if int(prod['idProdutoAcabado']) == int(copia['idProdutoAcabado']) and int(prod['idProdutoComposicao']) == int(prod['idProdutoComposicao']) and prod['DTINC'] > copia['DTINC']:
+                lista_remocao.append(prod)
+
+    # Criar uma nova lista excluindo os elementos a serem removidos
+    for p in lista_remocao:
+        if p in lista_completa:
+            lista_completa.remove(p)
+
+    return nova_lista
 
 
 #Função que soma a quantidade total de cada pedido
