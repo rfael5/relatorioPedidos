@@ -102,6 +102,16 @@ def adicionarEstoque(produtos, estoque):
                 p['estoque'] = e['SALDOESTOQUE']
                 p['unidadeEstoque'] = e['UN']
 
+def igualarUnEstoque(produtos):
+    ...
+    for prod in produtos:
+        alterarStringUnidade(prod['unidadeEstoque'])
+        alterarStringUnidade(prod['unidadeComposicao'])
+        #print(prod)
+        if prod['unidadeComposicao'] != prod['unidadeEstoque']:
+            prod['qtdProdutoComposicao'] = prod['qtdProdutoComposicao'] / prod['unidadeProp']
+            prod['unidadeComposicao'] = prod['unidadeEstoque']
+
 #Junta as subdivisões da linha de produção das receitas em um só grupo.
 #Por exemplo, as linhas de S1 até S6, são agrupadas apenas como sal.
 def agruparLinhas(produto):

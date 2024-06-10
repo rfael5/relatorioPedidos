@@ -73,6 +73,10 @@ def setarData(tipo_requisicao):
                 ajustes_ano_anterior = ajustesAplicados
             #insere na lista uma coluna com o saldo de estoque
             formatacao_objeto.adicionarEstoque(produtosQtdAjustada, estoque)
+            
+            #Igualar unidades do produto a unidade de estoque.
+            #formatacao_objeto.igualarUnEstoque(produtosQtdAjustada)
+            
             #Soma todos os pedidos de cada produto, chegando ao valor total de pedidos para cada um
             mp_acabados = formatacao_objeto.somarProdutosEvento(produtosQtdAjustada)
             #Faz as operações acima com a lista de composição dos semi-acabados
@@ -90,38 +94,38 @@ def checarEventosNaLista():
 
 #Mesmo fluxo da função acima setarData(), porém para os pedidos feitos
 #depois que a lista ja foi gerada para serem entregues naquela mesma semana.
-def setarDataPedidosMeioSemana(tipo_requisicao):
-    if tipo_requisicao == 'btn':
-        dataInicio = dt_inicio_semana.get()
-        dtInicioFormatada = formatarData(dataInicio)
-        dataFim = dt_fim_semana.get()
-        dtFimFormatada = formatarData(dataFim)
-    elif tipo_requisicao == 'timer':
-        data_atual = datetime.now() - timedelta(days=1)
-        dtInicioFormatada = data_atual.strftime('%Y%m%d')
-        #dtInicioFormatada = '20240422'
-        dataFim = dt_fim_semana.get()
-        dtFimFormatada = formatarData(dataFim)
+# def setarDataPedidosMeioSemana(tipo_requisicao):
+#     if tipo_requisicao == 'btn':
+#         dataInicio = dt_inicio_semana.get()
+#         dtInicioFormatada = formatarData(dataInicio)
+#         dataFim = dt_fim_semana.get()
+#         dtFimFormatada = formatarData(dataFim)
+#     elif tipo_requisicao == 'timer':
+#         data_atual = datetime.now() - timedelta(days=1)
+#         dtInicioFormatada = data_atual.strftime('%Y%m%d')
+#         #dtInicioFormatada = '20240422'
+#         dataFim = dt_fim_semana.get()
+#         dtFimFormatada = formatarData(dataFim)
 
-    #checarEventosNaLista()
-    global ajustes_meio_semana
-    pedidosMeioSemana = connection.getPedidosMeioSemana(dtInicioFormatada, dtFimFormatada)
-    semiacabados = connection.getSemiAcabadosMeioSemana(dtInicioFormatada, dtFimFormatada)
-    ajustes = connection.getAjustes(dtInicioFormatada, dtFimFormatada)
+#     #checarEventosNaLista()
+#     global ajustes_meio_semana
+#     pedidosMeioSemana = connection.getPedidosMeioSemana(dtInicioFormatada, dtFimFormatada)
+#     semiacabados = connection.getSemiAcabadosMeioSemana(dtInicioFormatada, dtFimFormatada)
+#     ajustes = connection.getAjustes(dtInicioFormatada, dtFimFormatada)
     
-    if len(pedidosMeioSemana) == 0:
-        tamanho_lista = 0
-        return tamanho_lista
-    else:
-        estoque = connection.getEstoque()
-        produtosQtdAjustada = formatacao_objeto.calcularQtdProducao(pedidosMeioSemana)
-        ajustes_meio_semana = formatacao_objeto.aplicarAjustes(produtosQtdAjustada, ajustes)
-        formatacao_objeto.adicionarEstoque(ajustes_meio_semana, estoque)
-        mp_acabados = formatacao_objeto.somarProdutosEvento(ajustes_meio_semana)
-        mp_semiAcabados = criarDictSemiAcabados(mp_acabados, semiacabados, estoque)
-        produtos = formatacao_objeto.unirListasComposicao(mp_acabados, mp_semiAcabados)
+#     if len(pedidosMeioSemana) == 0:
+#         tamanho_lista = 0
+#         return tamanho_lista
+#     else:
+#         estoque = connection.getEstoque()
+#         produtosQtdAjustada = formatacao_objeto.calcularQtdProducao(pedidosMeioSemana)
+#         ajustes_meio_semana = formatacao_objeto.aplicarAjustes(produtosQtdAjustada, ajustes)
+#         formatacao_objeto.adicionarEstoque(ajustes_meio_semana, estoque)
+#         mp_acabados = formatacao_objeto.somarProdutosEvento(ajustes_meio_semana)
+#         mp_semiAcabados = criarDictSemiAcabados(mp_acabados, semiacabados, estoque)
+#         produtos = formatacao_objeto.unirListasComposicao(mp_acabados, mp_semiAcabados)
         
-        return produtos
+#         return produtos
 
 #Função para o usuário filtrar a lista e visualizar os produtos
 #por linha de produção, caso queiram ver somente os pedidos para
@@ -182,6 +186,7 @@ def formatarDataPedido(data):
 #Essa função é executada e mostra as receitas em que aquele produto vai ser usado, os
 #clientes que as pediram, e a data de entrega.
 def verTodosEventos(lista_produtos, tabela):
+    print(f"Tabela atual: {tabelas.tabela_atual}")
     indice = tabela.selection()
     if indice:
         produto = tabela.item(indice)['values'][0]
@@ -240,34 +245,34 @@ def abrirJanelaAnoAnterior(produtosFiltrados):
 
 #Recupera os pedidos feitos depois que a lista já foi gerada e insere na
 #tabela na interface.
-def inserirTabelaTeste(tipo_requisicao):
-    produtos_meio_semana = setarDataPedidosMeioSemana(tipo_requisicao)
+# def inserirTabelaTeste(tipo_requisicao):
+#     produtos_meio_semana = setarDataPedidosMeioSemana(tipo_requisicao)
     
-    if produtos_meio_semana == 0 or produtos_meio_semana == None:
-        mensagem_banco.configure(text='Nenhum evento foi marcado hoje para essa semana')
-    else:
-        qtd_eventos_tabela = len(tabelas.tabelaSemana.get_children()) + len(tabelas.tabelaSemana_semi.get_children())
-        qtd_eventos_query = len(produtos_meio_semana)
-        if qtd_eventos_tabela != qtd_eventos_query:
-            mensagem_banco.configure(text='Houve marcação de eventos hoje para essa semana.')
-            tabelas.tabelaSemana.delete(*tabelas.tabelaSemana.get_children())
-            tabelas.tabelaSemana_semi.delete(*tabelas.tabelaSemana_semi.get_children())
-            for p in produtos_meio_semana:
-                id = p['idProdutoComposicao']
-                nome = p['nomeProdutoComposicao']
-                classificacao = p['classificacao']
-                linha = p['linha']
-                estoque = p['estoque']
-                unidadeEstoque = p['unidadeEstoque']
-                totalProducao = p['totalProducao']
-                unidade = p['unidade']
-                data = (id, nome, classificacao, linha, estoque, unidadeEstoque, totalProducao, unidade)
-                if p['produtoAcabado'] == True:
-                    tabelas.tabelaSemana.insert(parent='', index=0, values=data)
-                else:
-                    tabelas.tabelaSemana_semi.insert(parent='', index=0, values=data)
-        else:
-            return
+#     if produtos_meio_semana == 0 or produtos_meio_semana == None:
+#         mensagem_banco.configure(text='Nenhum evento foi marcado hoje para essa semana')
+#     else:
+#         qtd_eventos_tabela = len(tabelas.tabelaSemana.get_children()) + len(tabelas.tabelaSemana_semi.get_children())
+#         qtd_eventos_query = len(produtos_meio_semana)
+#         if qtd_eventos_tabela != qtd_eventos_query:
+#             mensagem_banco.configure(text='Houve marcação de eventos hoje para essa semana.')
+#             tabelas.tabelaSemana.delete(*tabelas.tabelaSemana.get_children())
+#             tabelas.tabelaSemana_semi.delete(*tabelas.tabelaSemana_semi.get_children())
+#             for p in produtos_meio_semana:
+#                 id = p['idProdutoComposicao']
+#                 nome = p['nomeProdutoComposicao']
+#                 classificacao = p['classificacao']
+#                 linha = p['linha']
+#                 estoque = p['estoque']
+#                 unidadeEstoque = p['unidadeEstoque']
+#                 totalProducao = p['totalProducao']
+#                 unidade = p['unidade']
+#                 data = (id, nome, classificacao, linha, estoque, unidadeEstoque, totalProducao, unidade)
+#                 if p['produtoAcabado'] == True:
+#                     tabelas.tabelaSemana.insert(parent='', index=0, values=data)
+#                 else:
+#                     tabelas.tabelaSemana_semi.insert(parent='', index=0, values=data)
+#         else:
+#             return
 
 
 def formatarListaSemiAcabados(lista, estoque):
@@ -357,14 +362,14 @@ def gerarPlanilha():
 
 #Essa função é executada de 10 em 10 segundos e confere se foi feito algum pedido
 #depois que a lista de pedidos já foi gerada, para ser entregue naquela semana.
-def consultarAttBanco():
-    #global hora_atual
-    hora_atual = datetime.now()
-    hora_ultima_checagem.configure(text=f'Momento da última checagem: {str(hora_atual)}')
-    #Caso haja novos pedidos, essa função irá buscar esses pedidos de última hora no banco
-    #e mostrá-los em uma outra janela na nossa interface
-    inserirTabelaTeste('timer')
-    page2.after(10000, consultarAttBanco)
+# def consultarAttBanco():
+#     #global hora_atual
+#     hora_atual = datetime.now()
+#     hora_ultima_checagem.configure(text=f'Momento da última checagem: {str(hora_atual)}')
+#     #Caso haja novos pedidos, essa função irá buscar esses pedidos de última hora no banco
+#     #e mostrá-los em uma outra janela na nossa interface
+#     inserirTabelaTeste('timer')
+#     page2.after(10000, consultarAttBanco)
 
 
 #O código abaixo cria a interface que usamos para testar nosso script.
@@ -485,48 +490,51 @@ radio_semiacabados.grid(row = 16, columnspan=2, padx=(150,0), pady=2, sticky="ns
 btn_obter_data = Button(secondFrame, text="Gerar Planilhas Excel", bg='#C0C0C0', font=("Arial", 16), command=gerarPlanilha)
 btn_obter_data.grid(row=17, column=0, columnspan=2, padx=(80, 0), pady=(10, 30), sticky='nsew')
 
+tabelas.criarTabela(secondFrame)
+root.mainloop()
+
 
 ####################################################
 #PÁGINA 2
 ####################################################
 
 
-page2 = Frame(notebook)
-notebook.add(page2,text='Página 2')
+# page2 = Frame(notebook)
+# notebook.add(page2,text='Página 2')
 
-lb1 = Label(page2, text='I am page 2')
-lb1.grid(pady=20)
+# lb1 = Label(page2, text='I am page 2')
+# lb1.grid(pady=20)
 
-hora_ultima_checagem = Label(page2, text='', bg='#C0C0C0', font=("Arial", 16))
-hora_ultima_checagem.grid(row=0, column=0)
+# hora_ultima_checagem = Label(page2, text='', bg='#C0C0C0', font=("Arial", 16))
+# hora_ultima_checagem.grid(row=0, column=0)
 
-mensagem_banco = Label(page2, text='', font=("Arial", 16))
-mensagem_banco.grid(row=1, column=0)
+# mensagem_banco = Label(page2, text='', font=("Arial", 16))
+# mensagem_banco.grid(row=1, column=0)
 
-dt_inicio_semana = Label(page2, text="De:", font=("Arial", 14))
-dt_inicio_semana.grid(row=2, padx=(0, 190), column=0, sticky="e")
+# dt_inicio_semana = Label(page2, text="De:", font=("Arial", 14))
+# dt_inicio_semana.grid(row=2, padx=(0, 190), column=0, sticky="e")
 
-dt_inicio_semana = DateEntry(page2, font=('Arial', 12), width=22, height=20, background='darkblue', foreground='white', borderwidth=2, date_pattern='dd/mm/yyyy')
-dt_inicio_semana.grid(row=3, column=0, padx=(150, 0), pady=5, sticky="e")
+# dt_inicio_semana = DateEntry(page2, font=('Arial', 12), width=22, height=20, background='darkblue', foreground='white', borderwidth=2, date_pattern='dd/mm/yyyy')
+# dt_inicio_semana.grid(row=3, column=0, padx=(150, 0), pady=5, sticky="e")
 
-dt_fim_semana = Label(page2, text="Até:", font=("Arial", 14))
-dt_fim_semana.grid(row=2, column=1, padx=(50, 0), pady=5, sticky="w")
+# dt_fim_semana = Label(page2, text="Até:", font=("Arial", 14))
+# dt_fim_semana.grid(row=2, column=1, padx=(50, 0), pady=5, sticky="w")
 
-dt_fim_semana = DateEntry(page2, font=('Arial', 12), width=22, height=20, background='darkblue', foreground='white', borderwidth=2, date_pattern='dd/mm/yyyy')
-dt_fim_semana.grid(row=3, column=1, padx=(50, 0), pady=5, sticky="w")
+# dt_fim_semana = DateEntry(page2, font=('Arial', 12), width=22, height=20, background='darkblue', foreground='white', borderwidth=2, date_pattern='dd/mm/yyyy')
+# dt_fim_semana.grid(row=3, column=1, padx=(50, 0), pady=5, sticky="w")
 
-btn_pedidos_semana = Button(page2, text="Ver pedidos meio semana", bg='#C0C0C0', font=("Arial", 16), command= lambda: inserirTabelaTeste('btn'))
-btn_pedidos_semana.grid(row=4)
-#verTodosEventos
-btn_mostrar_eventos = Button(page2, text="Ver todos os eventos", bg='#C0C0C0', font=("Arial", 16), command= lambda:verTodosEventos(ajustes_meio_semana, tabelas.tabelaSemana))
-btn_mostrar_eventos.grid(row=7)
+# btn_pedidos_semana = Button(page2, text="Ver pedidos meio semana", bg='#C0C0C0', font=("Arial", 16), command= lambda: inserirTabelaTeste('btn'))
+# btn_pedidos_semana.grid(row=4)
+# #verTodosEventos
+# btn_mostrar_eventos = Button(page2, text="Ver todos os eventos", bg='#C0C0C0', font=("Arial", 16), command= lambda:verTodosEventos(ajustes_meio_semana, tabelas.tabelaSemana))
+# btn_mostrar_eventos.grid(row=7)
 
-#tabelas.criarTabelaMeioSemana(page2)
-tabelas.criarTabela(secondFrame)
+# #tabelas.criarTabelaMeioSemana(page2)
+# tabelas.criarTabela(secondFrame)
 
-#consultarAttBanco()
+# #consultarAttBanco()
 
-root.mainloop()
+# root.mainloop()
 
 
 

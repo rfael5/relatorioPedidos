@@ -6,7 +6,7 @@ import json
 # conexao = (
 #     "mssql+pyodbc:///?odbc_connect=" + 
 #     "DRIVER={ODBC Driver 17 for SQL Server};" +
-#     "SERVER=localhost;" +
+#     "SERVER=192.168.1.137;" +
 #     "DATABASE=SOUTTOMAYOR;" +
 #     "UID=Sa;" +
 #     "PWD=P@ssw0rd2023"
@@ -36,10 +36,11 @@ def receberDados(query):
 def getProdutosComposicao(dataInicio, dataFim):
     queryProdutosComposicao =  f"""
     select 
-        e.PK_DOCTOPED as idEvento, e.NOME as nomeEvento, e.DOCUMENTO as documento, e.DTEVENTO as dataEvento, e.DTPREVISAO as dataPrevisao, e.DATA as dataPedido, p.PK_MOVTOPED as idMovtoped, 
-        ca.IDX_LINHA as linha, p.DESCRICAO as nomeProdutoAcabado, ca.RENDIMENTO as rendimento, p.UNIDADE as unidadeAcabado, 
-        a.RDX_PRODUTO as idProdutoAcabado, c.DESCRICAO as nomeProdutoComposicao, c.IDX_LINHA as classificacao, 
-        c.PK_PRODUTO as idProdutoComposicao, a.QUANTIDADE as qtdProdutoComposicao, a.UN as unidadeComposicao, p.L_QUANTIDADE as qtdProdutoEvento, a.DTINC
+        e.PK_DOCTOPED as idEvento, e.NOME as nomeEvento, e.DOCUMENTO as documento, e.DTEVENTO as dataEvento, e.DTPREVISAO as dataPrevisao, 
+        e.DATA as dataPedido, p.PK_MOVTOPED as idMovtoped, ca.IDX_LINHA as linha, p.DESCRICAO as nomeProdutoAcabado, ca.RENDIMENTO as rendimento, 
+        p.UNIDADE as unidadeAcabado, a.RDX_PRODUTO as idProdutoAcabado, c.DESCRICAO as nomeProdutoComposicao, c.IDX_LINHA as classificacao, 
+        c.PK_PRODUTO as idProdutoComposicao, a.QUANTIDADE as qtdProdutoComposicao, a.UN as unidadeComposicao, p.L_QUANTIDADE as qtdProdutoEvento, 
+        a.DTINC, c.PROPPRODUCAO as unidadeProp
     from TPAPRODCOMPOSICAO as a 
         inner join TPAPRODUTO as c on a.IDX_PRODUTO = c.PK_PRODUTO
         inner join TPAMOVTOPED as p on a.RDX_PRODUTO = p.IDX_PRODUTO
@@ -109,47 +110,47 @@ def getPedidosMeioSemana(dataInicio, dataFim):
         and c.OPSUPRIMENTOMP = 'S'
     order by p.DESCRICAO
     """
-    
+
     pedidosMeioSemana = receberDados(queryPedidosMeioSemana)
     return pedidosMeioSemana
 
 #Query que busca os produtos usados na composição dos semi-acabados, que são
-#massas e recheios que vão nas receitas prontas, e que também tem que ser 
+#massas e recheios que vão nas receitas prontas, e que também tem que ser
 #requisitados no estoque.
 def getCompSemiAcabados(dataInicio, dataFim):
     queryComposicao = f"""
     SELECT 
-    C.IDX_PRODUTO as idProduto, 
-    P.DESCRICAO as nomeProdutoComposicao, 
-    C.UN as unidadeProdutoComposicao, 
-    C.QUANTIDADE as qtdProdutoComposicao, 
-    P.IDX_LINHA as classificacao, 
-    P2.PK_PRODUTO as idProdutoAcabado, 
-    P2.DESCRICAO as nomeProdutoAcabado, 
-    P2.RENDIMENTO1 AS rendimento,
-    C.DTINC 
-FROM 
-    TPAPRODCOMPOSICAO AS C
-    INNER JOIN TPAPRODUTO AS P ON C.IDX_PRODUTO = P.PK_PRODUTO
-    INNER JOIN TPAPRODUTO AS P2 ON C.RDX_PRODUTO = P2.PK_PRODUTO
-WHERE 
-    C.RDX_PRODUTO IN  (
-        SELECT 
-            DISTINCT c.PK_PRODUTO
-        FROM 
-            TPAPRODCOMPOSICAO as a 
-            INNER JOIN TPAPRODUTO as c ON a.IDX_PRODUTO = c.PK_PRODUTO
-            INNER JOIN TPAMOVTOPED as p ON a.RDX_PRODUTO = p.IDX_PRODUTO
-            INNER JOIN TPADOCTOPED as e ON p.RDX_DOCTOPED = e.PK_DOCTOPED
-            INNER JOIN TPAPRODUTO as ca ON p.IDX_PRODUTO = ca.PK_PRODUTO
-        WHERE 
-            e.DTPREVISAO BETWEEN '{dataInicio}' AND '{dataFim}'
-            AND e.SITUACAO IN ('Z', 'B', 'V') -- Verifica se SITUACAO está em um conjunto de valores
-            AND c.OPSUPRIMENTOMP = 'S'
-            AND (e.TPDOCTO = 'EC' OR e.TPDOCTO = 'OR') -- Verifica se TPDOCTO é 'EC' ou 'OR'
-    )
-    AND P.OPSUPRIMENTOMP = 'S'
-ORDER BY P.DESCRICAO;
+        C.IDX_PRODUTO as idProduto,
+        P.DESCRICAO as nomeProdutoComposicao,
+        C.UN as unidadeProdutoComposicao,
+        C.QUANTIDADE as qtdProdutoComposicao,
+        P.IDX_LINHA as classificacao,
+        P2.PK_PRODUTO as idProdutoAcabado, 
+        P2.DESCRICAO as nomeProdutoAcabado, 
+        P2.RENDIMENTO1 AS rendimento,
+        C.DTINC
+    FROM
+        TPAPRODCOMPOSICAO AS C
+        INNER JOIN TPAPRODUTO AS P ON C.IDX_PRODUTO = P.PK_PRODUTO
+        INNER JOIN TPAPRODUTO AS P2 ON C.RDX_PRODUTO = P2.PK_PRODUTO
+    WHERE 
+        C.RDX_PRODUTO IN  (
+            SELECT 
+                DISTINCT c.PK_PRODUTO
+            FROM 
+                TPAPRODCOMPOSICAO as a 
+                INNER JOIN TPAPRODUTO as c ON a.IDX_PRODUTO = c.PK_PRODUTO
+                INNER JOIN TPAMOVTOPED as p ON a.RDX_PRODUTO = p.IDX_PRODUTO
+                INNER JOIN TPADOCTOPED as e ON p.RDX_DOCTOPED = e.PK_DOCTOPED
+                INNER JOIN TPAPRODUTO as ca ON p.IDX_PRODUTO = ca.PK_PRODUTO
+            WHERE 
+                e.DTPREVISAO BETWEEN '{dataInicio}' AND '{dataFim}'
+                AND e.SITUACAO IN ('Z', 'B', 'V') -- Verifica se SITUACAO está em um conjunto de valores
+                AND c.OPSUPRIMENTOMP = 'S'
+                AND (e.TPDOCTO = 'EC' OR e.TPDOCTO = 'OR') -- Verifica se TPDOCTO é 'EC' ou 'OR'
+        )
+        AND P.OPSUPRIMENTOMP = 'S'
+    ORDER BY P.DESCRICAO;
     """
     composicaoSemiAcabados = receberDados(queryComposicao)
     return composicaoSemiAcabados
