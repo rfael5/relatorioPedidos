@@ -172,4 +172,29 @@ def criarTabelaAnoAnterior(nova_janela):
     tbl_ano_anterior.column('Unidade', width=100, anchor=CENTER)
     tbl_ano_anterior.column('Composição acabado', width=200, anchor=CENTER)
 
+def tabelaControleEstoque(frame):
+    global tbl_controle
+    tbl_controle = ttk.Treeview(frame, columns = ('ID', 'Produto', 'UN', 'Cód. Produto', 'Saldo'), show='headings')
+    tbl_controle.heading('ID', text='ID')
+    tbl_controle.heading('Produto', text='Produto')
+    tbl_controle.heading('UN', text='UN')
+    tbl_controle.heading('Cód. Produto', text='Cod. Produto')
+    tbl_controle.heading('Saldo', text='Saldo')
+    tbl_controle.grid(row=4, columnspan=2, padx=(80, 0), pady=10, sticky="nsew")
+    
+    tbl_controle.column('ID', width=100, anchor=CENTER)
+    tbl_controle.column('Produto', width=300, anchor=CENTER)
+    tbl_controle.column('UN', width=100, anchor=CENTER)
+    tbl_controle.column('Cód. Produto', width=100, anchor=CENTER)
+    tbl_controle.column('Saldo', width=100, anchor=CENTER)
+    tbl_controle.bind('<ButtonRelease>', armazenarInfoProduto)
+
+def armazenarInfoProduto(event):
+    #global dados_produto
+    indice = tbl_controle.selection()
+    if indice:
+        p = tbl_controle.item(indice)['values']
+        return p
+    
+
     
