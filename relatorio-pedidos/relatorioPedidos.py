@@ -12,7 +12,10 @@ import connection
 import formatacao_objeto
 import tabelas
 import criacao_planilha
+import db_ctrl_estoque
+import controleEstoqueService
 
+#db_ctrl_estoque.create_sqlite_database('controle_estoque.db')
 
 #Retornam as datas para um formato legivel
 def formatarData(data):
@@ -371,6 +374,70 @@ def gerarPlanilha():
 #     inserirTabelaTeste('timer')
 #     page2.after(10000, consultarAttBanco)
 
+def inserirTabelaControle():
+    global prod_estoque
+    prod_estoque = controleEstoqueService.formatarProdutosControle()
+    tabelas.tbl_controle.delete(*tabelas.tbl_controle.get_children())
+    for produto in prod_estoque:
+        id = produto['PK_PRODUTO']
+        descricao = produto['DESCRICAO']
+        un = produto['UN']
+        cod_produto = produto['CODPRODUTO']
+        saldo = produto['somaQuantidade']
+        data = (id, descricao, un, cod_produto, saldo)
+        tabelas.tbl_controle.insert(parent='', index=0, values=data)
+
+def janelaAttEstoque():
+    global janela_soma
+    janela_soma = Toplevel(root)
+    janela_soma.title("Atualização estoque")
+    janela_soma.geometry("400x300")
+    
+    dados_prod = tabelas.armazenarInfoProduto(Event)
+    
+    titulo_janela = Label(janela_soma, text=f"{dados_prod[1]}", font=("Arial", 14))
+    titulo_janela.grid(row=0, padx=(80, 0), pady=(0,20))
+    
+    lbl_add_saldo = Label(janela_soma, text = 'Atualizar estoque:')
+    lbl_add_saldo.grid(row=1, padx=(80, 0))
+    att_var = ''
+    att_saldo = Entry(janela_soma, textvariable=att_var, bd=4)
+    att_saldo.grid(row=2, padx=(80, 0), pady=(0,20))
+    
+    btn_add = Button(janela_soma, text="Adicionar", bg='#C0C0C0', font=("Arial", 16), command=lambda: attSaldo(dados_prod, att_saldo.get()))
+    btn_add.grid(row=3, sticky='nsew', padx=(80, 0), pady=(0,20))
+
+
+def attSaldo(produto, att_saldo):
+    novo_produto = {
+        "pkProduto": produto[0],
+        "descricao": produto[1],
+        "saldo": att_saldo
+    }
+    db_ctrl_estoque.adicionarEstoque(novo_produto)
+    db_ctrl_estoque.getEstoqueCompleto()
+    
+    inserirTabelaControle()
+    janela_soma.destroy()
+
+def filtrarListaEstoque(event):
+    text = input_saldo.get()
+    _estoque = prod_estoque
+    prod_filtrados = list(filter(lambda produto:text.lower() in produto['DESCRICAO'].lower(), _estoque))
+    tabelas.tbl_controle.delete(*tabelas.tbl_controle.get_children())
+    for produto in prod_filtrados:
+        id = produto['PK_PRODUTO']
+        descricao = produto['DESCRICAO']
+        un = produto['UN']
+        cod_produto = produto['CODPRODUTO']
+        saldo = produto['somaQuantidade']
+        data = (id, descricao, un, cod_produto, saldo)
+        tabelas.tbl_controle.insert(parent='', index=0, values=data)
+    
+
+
+# btn_somar_estoque = Button(page2, text="Adicionar estoque", bg='#C0C0C0', font=("Arial", 16))
+# btn_somar_estoque.grid(row=5, column=0)
 
 #O código abaixo cria a interface que usamos para testar nosso script.
 
@@ -490,17 +557,37 @@ radio_semiacabados.grid(row = 16, columnspan=2, padx=(150,0), pady=2, sticky="ns
 btn_obter_data = Button(secondFrame, text="Gerar Planilhas Excel", bg='#C0C0C0', font=("Arial", 16), command=gerarPlanilha)
 btn_obter_data.grid(row=17, column=0, columnspan=2, padx=(80, 0), pady=(10, 30), sticky='nsew')
 
-tabelas.criarTabela(secondFrame)
-root.mainloop()
-
 
 ####################################################
 #PÁGINA 2
 ####################################################
 
+page2 = Frame(notebook)
+notebook.add(page2,text='Página 2')
 
-# page2 = Frame(notebook)
-# notebook.add(page2,text='Página 2')
+saldo_var = ''
+input_saldo = Entry(page2, textvariable=saldo_var, bd=4)
+input_saldo.grid(row=1, column=0, columnspan=2, padx=(80, 0), pady=(10, 30), sticky='nsew')
+input_saldo.bind("<KeyRelease>", filtrarListaEstoque)
+
+# btn_ver_produto = Button(page2, text="Ver produto", bg='#C0C0C0', font=("Arial", 16), command=lambda: db_ctrl_estoque.buscarProdutoId(1))
+# btn_ver_produto.grid(row=3, column=0, columnspan=2, padx=(80, 0), pady=(10, 30), sticky='nsew')
+
+#Row 4 - Tabela produtos fornecedores
+
+btn_somar_estoque = Button(page2, text="Adicionar estoque", bg='#C0C0C0', font=("Arial", 16), command=janelaAttEstoque)
+btn_somar_estoque.grid(row=5, column=0, columnspan=2, padx=(80, 0), pady=(10, 30), sticky='nsew')
+
+btn_atualisar = Button(page2, text="Atualizar saldo", bg='#C0C0C0', font=("Arial", 16), command=inserirTabelaControle)
+btn_atualisar.grid(row=6, column=0, columnspan=2, padx=(80, 0), pady=(10, 30), sticky='nsew')
+
+# btn_subtrair_estoque = Button(page2, text="Retirar estoque", bg='#C0C0C0', font=("Arial", 16), command=lambda:janelaAttEstoque('subtrair'))
+# btn_subtrair_estoque.grid(row=5, column=1)
+
+tabelas.criarTabela(secondFrame)
+tabelas.tabelaControleEstoque(page2)
+inserirTabelaControle()
+root.mainloop()
 
 # lb1 = Label(page2, text='I am page 2')
 # lb1.grid(pady=20)

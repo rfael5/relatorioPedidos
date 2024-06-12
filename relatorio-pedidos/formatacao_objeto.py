@@ -199,3 +199,5 @@ def somarProdutosEvento(produtosComposicao):
     #Ordena os produtos em ordem alfabetica.
     dadosOrdenados = sorted(dadosDesserializados, key=lambda p:p['nomeProdutoComposicao'])
     return dadosOrdenados
+
+
