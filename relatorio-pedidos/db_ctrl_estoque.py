@@ -1,4 +1,3 @@
-import json
 import sqlite3
 
 caminho_bd = '//192.168.1.42/producao/controle_estoque/controle_estoque.db'
@@ -40,6 +39,24 @@ def criar_tabela():
     except sqlite3.Error as e:
         print(e)
 
+def criarTblControleSA():
+    query = """
+        CREATE TABLE IF NOT EXISTS ctrl_semi_acabados (
+            id INTEGER PRIMARY KEY,
+            idxProduto int NOT NULL,
+            descricao text NOT NULL,
+            saldo int NOT NULL
+        )
+    """
+    try:
+        with sqlite3.connect(caminho_bd) as conn:
+            cursor = conn.cursor()
+            cursor.execute(query)
+            conn.commit()
+        print("Tabela 'ctrl_semi_acabados' criada.")
+    except sqlite3.Error as e:
+        print(e)
+
 def adicionarEstoque(att):
     query = '''
         INSERT INTO ctrl_estoque (pkProduto, descricao, saldo) 
@@ -50,6 +67,21 @@ def adicionarEstoque(att):
         with sqlite3.connect(caminho_bd) as conn:
             cursor = conn.cursor()
             cursor.execute(query, (att['pkProduto'], att['descricao'], att['saldo']))
+            conn.commit()
+    except sqlite3.Error as e:
+        print(e)
+
+
+def addEstoqueSA(att):
+    query = '''
+        INSERT INTO ctrl_semi_acabados (idxProduto, descricao, saldo)
+            VALUES (?, ?, ?)
+    '''
+    
+    try:
+        with sqlite3.connect(caminho_bd) as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (att['idxProduto'], att['descricao'], att['saldo']))
             conn.commit()
     except sqlite3.Error as e:
         print(e)
@@ -79,6 +111,18 @@ def getEstoqueCompleto():
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute('SELECT pkProduto, descricao, saldo FROM ctrl_estoque')
+            rows = cursor.fetchall()
+            produtos = [dict(row) for row in rows]
+            return produtos
+    except sqlite3.Error as e:
+        print(e)
+
+def getEstoqueSA():
+    try:
+        with sqlite3.connect(caminho_bd) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute('SELECT idxProduto, descricao, saldo FROM ctrl_semi_acabados')
             rows = cursor.fetchall()
             produtos = [dict(row) for row in rows]
             return produtos

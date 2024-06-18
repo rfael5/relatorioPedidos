@@ -1,4 +1,3 @@
-import connection
 import db_ctrl_estoque
 
 def addSaldo(produto, qtd):

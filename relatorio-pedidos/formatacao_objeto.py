@@ -1,4 +1,3 @@
-from sqlalchemy import create_engine
 import pandas as pd
 import json
 
@@ -64,7 +63,7 @@ def mudarUnidade(unidade):
         return 'LT'
     else:
         return unidade
-    
+
 
 #Multiplica a quantidade do produto que vai na receita pela quantidade
 #de pedidos da receita final.

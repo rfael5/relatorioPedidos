@@ -1,8 +1,7 @@
-from tkinter import filedialog
 import pandas as pd
 import numpy as np
 import json
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from tkinter import *
 from tkinter import ttk
 from tkcalendar import DateEntry
@@ -15,7 +14,10 @@ import criacao_planilha
 import db_ctrl_estoque
 import controleEstoqueService
 
+# controleEstoque = controleEstoqueService.EstoqueService()
+# controleEstoque.formatarProdutosControle()
 #db_ctrl_estoque.create_sqlite_database('controle_estoque.db')
+db_ctrl_estoque.getEstoqueSA()
 
 #Retornam as datas para um formato legivel
 def formatarData(data):
@@ -285,7 +287,7 @@ def formatarListaSemiAcabados(lista, estoque):
     #Remove caracteres desnecessários que vem na string do nome do produto e da 
     #unidade de medida do produto.
     df['unidade'] = df['unidadeComposicao'].apply(formatacao_objeto.alterarStringUnidade)
-    df['nomeProdutoComposicao'] = df['nomeProdutoComposicao']. apply(formatacao_objeto.alterarStringUnidade)
+    df['nomeProdutoComposicao'] = df['nomeProdutoComposicao'].apply(formatacao_objeto.alterarStringUnidade)
     df['unidadeEstoque'] = df['unidadeEstoque'].apply(formatacao_objeto.alterarStringUnidade)
     #Converte as quantidades dos produtos que estão em grama e ml para kg e litros.
     df['totalProducao'] = df.apply(formatacao_objeto.converterKg, axis=1)
@@ -375,8 +377,11 @@ def gerarPlanilha():
 #     page2.after(10000, consultarAttBanco)
 
 def inserirTabelaControle():
+    controleEstoque = controleEstoqueService.EstoqueService()
+    controleEstoque.formatarProdutosControle()
     global prod_estoque
-    prod_estoque = controleEstoqueService.formatarProdutosControle()
+    #prod_estoque = controleEstoqueService.formatarProdutosControle()
+    prod_estoque = controleEstoque.ctrl_acabados
     tabelas.tbl_controle.delete(*tabelas.tbl_controle.get_children())
     for produto in prod_estoque:
         id = produto['PK_PRODUTO']
@@ -386,53 +391,90 @@ def inserirTabelaControle():
         saldo = produto['somaQuantidade']
         data = (id, descricao, un, cod_produto, saldo)
         tabelas.tbl_controle.insert(parent='', index=0, values=data)
+    
+    global saprod_estoque
+    saprod_estoque = controleEstoque.ctrl_semiacabados
+    tabelas.tbl_ctrl_semi.delete(*tabelas.tbl_ctrl_semi.get_children())
+    for sa in saprod_estoque:
+        id = sa['IDX_PRODUTO']
+        produto = sa['DESCRICAO']
+        saldo = sa['totalProducao']
+        un = sa['UN']
+        data_sa = (id, produto, saldo, un)
+        tabelas.tbl_ctrl_semi.insert(parent='', index=0, values=data_sa)
 
-def janelaAttEstoque():
-    global janela_soma
-    janela_soma = Toplevel(root)
-    janela_soma.title("Atualização estoque")
-    janela_soma.geometry("400x300")
+def janelaAttEstoque(_tbl, tp_controle):
+    dados_prod = tabelas.armazenarInfoProduto(Event, _tbl)
     
-    dados_prod = tabelas.armazenarInfoProduto(Event)
-    
-    titulo_janela = Label(janela_soma, text=f"{dados_prod[1]}", font=("Arial", 14))
-    titulo_janela.grid(row=0, padx=(80, 0), pady=(0,20))
-    
-    lbl_add_saldo = Label(janela_soma, text = 'Atualizar estoque:')
-    lbl_add_saldo.grid(row=1, padx=(80, 0))
-    att_var = ''
-    att_saldo = Entry(janela_soma, textvariable=att_var, bd=4)
-    att_saldo.grid(row=2, padx=(80, 0), pady=(0,20))
-    
-    btn_add = Button(janela_soma, text="Adicionar", bg='#C0C0C0', font=("Arial", 16), command=lambda: attSaldo(dados_prod, att_saldo.get()))
-    btn_add.grid(row=3, sticky='nsew', padx=(80, 0), pady=(0,20))
+    if dados_prod == None:
+        messagebox.showinfo('Nenhum produto selecionado', 'Selecione um produto na tabela para alterar seu saldo.')
+    else:
+        global janela_soma
+        janela_soma = Toplevel(root)
+        janela_soma.title("Atualização estoque")
+        janela_soma.geometry("400x300")
+        
+        titulo_janela = Label(janela_soma, text=f"{dados_prod[1]}", font=("Arial", 14))
+        titulo_janela.grid(row=0, padx=(40, 0), pady=(0,20))
+        
+        lbl_add_saldo = Label(janela_soma, text = 'Atualizar estoque:')
+        lbl_add_saldo.grid(row=1, padx=(40, 0))
+        att_var = ''
+        att_saldo = Entry(janela_soma, textvariable=att_var, bd=4)
+        att_saldo.grid(row=2, padx=(40, 0), pady=(0,20))
+        
+        btn_add = Button(janela_soma, text="Adicionar", bg='#C0C0C0', font=("Arial", 16), command=lambda: attSaldo(dados_prod, att_saldo.get(), tp_controle))
+        btn_add.grid(row=3, sticky='nsew', padx=(40, 0), pady=(0,20))
 
 
-def attSaldo(produto, att_saldo):
-    novo_produto = {
-        "pkProduto": produto[0],
-        "descricao": produto[1],
-        "saldo": att_saldo
-    }
-    db_ctrl_estoque.adicionarEstoque(novo_produto)
-    db_ctrl_estoque.getEstoqueCompleto()
+def attSaldo(produto, att_saldo, tp_controle):
+    if tp_controle == 'acabados':
+        novo_produto = {
+            "pkProduto": produto[0],
+            "descricao": produto[1],
+            "saldo": att_saldo
+        }
+        db_ctrl_estoque.adicionarEstoque(novo_produto)
+        db_ctrl_estoque.getEstoqueCompleto()
+    else:
+        adicao_saldo = {
+            "idxProduto":produto[0],
+            "descricao":produto[1],
+            "saldo":att_saldo
+        }
+        db_ctrl_estoque.addEstoqueSA(adicao_saldo)
+        db_ctrl_estoque.getEstoqueSA
     
     inserirTabelaControle()
     janela_soma.destroy()
 
-def filtrarListaEstoque(event):
-    text = input_saldo.get()
-    _estoque = prod_estoque
-    prod_filtrados = list(filter(lambda produto:text.lower() in produto['DESCRICAO'].lower(), _estoque))
-    tabelas.tbl_controle.delete(*tabelas.tbl_controle.get_children())
-    for produto in prod_filtrados:
-        id = produto['PK_PRODUTO']
-        descricao = produto['DESCRICAO']
-        un = produto['UN']
-        cod_produto = produto['CODPRODUTO']
-        saldo = produto['somaQuantidade']
-        data = (id, descricao, un, cod_produto, saldo)
-        tabelas.tbl_controle.insert(parent='', index=0, values=data)
+def filtrarListaEstoque(event, tipo_tabela):
+    if tipo_tabela == 'acabados':
+        text = input_saldo.get()
+        _estoque = prod_estoque
+        prod_filtrados = list(filter(lambda produto:text.lower() in produto['DESCRICAO'].lower(), _estoque))
+        tabelas.tbl_controle.delete(*tabelas.tbl_controle.get_children())
+        for produto in prod_filtrados:
+            id = produto['PK_PRODUTO']
+            descricao = produto['DESCRICAO']
+            un = produto['UN']
+            cod_produto = produto['CODPRODUTO']
+            saldo = produto['somaQuantidade']
+            data = (id, descricao, un, cod_produto, saldo)
+            tabelas.tbl_controle.insert(parent='', index=0, values=data)
+    else:
+        text = input_saldo_sa.get()
+        _estoquesa = saprod_estoque
+        prodsa_filtrados = list(filter(lambda prodsa:text.lower() in prodsa['DESCRICAO'].lower(), _estoquesa))
+        tabelas.tbl_ctrl_semi.delete(*tabelas.tbl_ctrl_semi.get_children())
+        for semiacabado in prodsa_filtrados:
+            id = semiacabado['IDX_PRODUTO']
+            produto = semiacabado['DESCRICAO']
+            saldo = semiacabado['totalProducao']
+            un = semiacabado['UN']
+            data_sa = (id, produto, saldo, un)
+            tabelas.tbl_ctrl_semi.insert(parent='', index=0, values=data_sa)
+            
     
 
 
@@ -568,24 +610,40 @@ notebook.add(page2,text='Página 2')
 saldo_var = ''
 input_saldo = Entry(page2, textvariable=saldo_var, bd=4)
 input_saldo.grid(row=1, column=0, columnspan=2, padx=(80, 0), pady=(10, 30), sticky='nsew')
-input_saldo.bind("<KeyRelease>", filtrarListaEstoque)
+input_saldo.bind("<KeyRelease>", lambda event: filtrarListaEstoque(event, 'acabados'))
 
-# btn_ver_produto = Button(page2, text="Ver produto", bg='#C0C0C0', font=("Arial", 16), command=lambda: db_ctrl_estoque.buscarProdutoId(1))
-# btn_ver_produto.grid(row=3, column=0, columnspan=2, padx=(80, 0), pady=(10, 30), sticky='nsew')
+#Row 4 - Tabela controle estoque
 
-#Row 4 - Tabela produtos fornecedores
-
-btn_somar_estoque = Button(page2, text="Adicionar estoque", bg='#C0C0C0', font=("Arial", 16), command=janelaAttEstoque)
+btn_somar_estoque = Button(page2, text="Adicionar estoque", bg='#C0C0C0', font=("Arial", 16), command=lambda: janelaAttEstoque(tabelas.tbl_controle, 'acabados'))
 btn_somar_estoque.grid(row=5, column=0, columnspan=2, padx=(80, 0), pady=(10, 30), sticky='nsew')
 
 btn_atualisar = Button(page2, text="Atualizar saldo", bg='#C0C0C0', font=("Arial", 16), command=inserirTabelaControle)
 btn_atualisar.grid(row=6, column=0, columnspan=2, padx=(80, 0), pady=(10, 30), sticky='nsew')
 
-# btn_subtrair_estoque = Button(page2, text="Retirar estoque", bg='#C0C0C0', font=("Arial", 16), command=lambda:janelaAttEstoque('subtrair'))
-# btn_subtrair_estoque.grid(row=5, column=1)
+####################################################
+#PÁGINA 3
+####################################################
+
+page3 = Frame(notebook)
+notebook.add(page3,text='Página 3')
+
+saldo_var_sa = ''
+input_saldo_sa = Entry(page3, textvariable=saldo_var_sa, bd=4)
+input_saldo_sa.grid(row=1, column=0, columnspan=2, padx=(80, 0), pady=(10, 30), sticky='nsew')
+input_saldo_sa.bind("<KeyRelease>", lambda event: filtrarListaEstoque(event, 'semiacabados'))
+
+#Row 4 - Tabela controle semi-acabados
+
+btn_somar_estoque = Button(page3, text="Adicionar estoque", bg='#C0C0C0', font=("Arial", 16), command=lambda: janelaAttEstoque(tabelas.tbl_ctrl_semi, 'semi_acabados'))
+btn_somar_estoque.grid(row=5, column=0, columnspan=2, padx=(80, 0), pady=(10, 30), sticky='nsew')
+
+btn_atualisar = Button(page3, text="Atualizar saldo", bg='#C0C0C0', font=("Arial", 16), command=inserirTabelaControle)
+btn_atualisar.grid(row=6, column=0, columnspan=2, padx=(80, 0), pady=(10, 30), sticky='nsew')
+
 
 tabelas.criarTabela(secondFrame)
 tabelas.tabelaControleEstoque(page2)
+tabelas.tabelaCtrlSemiacabados(page3)
 inserirTabelaControle()
 root.mainloop()
 

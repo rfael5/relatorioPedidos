@@ -187,14 +187,36 @@ def tabelaControleEstoque(frame):
     tbl_controle.column('UN', width=100, anchor=CENTER)
     tbl_controle.column('Cód. Produto', width=100, anchor=CENTER)
     tbl_controle.column('Saldo', width=100, anchor=CENTER)
-    tbl_controle.bind('<ButtonRelease>', armazenarInfoProduto)
+    tbl_controle.bind('<ButtonRelease>', lambda event: armazenarInfoProduto(event, tbl_controle))
 
-def armazenarInfoProduto(event):
-    #global dados_produto
-    indice = tbl_controle.selection()
-    if indice:
-        p = tbl_controle.item(indice)['values']
-        return p
+def tabelaCtrlSemiacabados(frame):
+    global tbl_ctrl_semi
+    tbl_ctrl_semi = ttk.Treeview(frame, columns = ('ID', 'Produto', 'Saldo', 'UN',), show='headings')
+    tbl_ctrl_semi.heading('ID', text='ID')
+    tbl_ctrl_semi.heading('Produto', text='Produto')
+    tbl_ctrl_semi.heading('Saldo', text='Saldo')
+    tbl_ctrl_semi.heading('UN', text='UN')
+    tbl_ctrl_semi.grid(row=4, columnspan=2, padx=(80, 0), pady=10, sticky="nsew")
     
+    tbl_ctrl_semi.column('ID', width=100, anchor=CENTER)
+    tbl_ctrl_semi.column('Produto', width=300, anchor=CENTER)
+    tbl_ctrl_semi.column('Saldo', width=100, anchor=CENTER)
+    tbl_ctrl_semi.column('UN', width=100, anchor=CENTER)
+    
+    tbl_ctrl_semi.bind('<ButtonRelease>', lambda event: armazenarInfoProduto(event, tbl_ctrl_semi))
+
+def armazenarInfoProduto(event, _tblControle):
+    #global dados_produto
+    indice = _tblControle.selection()
+    if indice:
+        p = _tblControle.item(indice)['values']
+        print(p)
+        return p
+
+# def armazenarInfoSemiacabado(event):
+#     indice = tbl_controle.selection()
+#     if indice:
+#         p = tbl_controle.item(indice)['values']
+#         return p
 
     

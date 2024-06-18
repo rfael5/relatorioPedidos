@@ -270,3 +270,18 @@ def getProdutosControleEstoque():
     
     res = receberDados(query)
     return res
+
+def getControleSemiAcabados():
+    query = '''
+        SELECT C.IDX_PRODUTO, C.RDX_PRODUTO, PC.DESCRICAO, C.UN, C.QUANTIDADE FROM TPAPRODCOMPOSICAO AS C
+            INNER JOIN TPAPRODUTO AS PC ON C.IDX_PRODUTO = PC.PK_PRODUTO
+        WHERE C.RDX_PRODUTO IN (
+            SELECT DISTINCT P.PK_PRODUTO FROM TPAPRODUTO AS P 
+                LEFT JOIN TPAMOVTOPED AS M ON PK_PRODUTO = IDX_PRODUTO AND M.DATA >= '20240610'
+            WHERE P.ESTOQUE = 'S' AND P.IDX_NEGOCIO = 'Produtos Acabados' AND M.SITUACAOOP = 'U'
+            GROUP BY PK_PRODUTO, P.DESCRICAO, P.UN, P.CODPRODUTO
+        ) AND PC.ESTOQUE = 'S'
+    '''
+    
+    res = receberDados(query)
+    return res
